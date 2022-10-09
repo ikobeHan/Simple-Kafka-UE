@@ -22,20 +22,26 @@ KafkaConsumerClient_->stop();
 */
 static volatile bool run = true;
 
-DECLARE_DELEGATE_OneParam(FKafkaConsumerCallbackHandle, FString);
+DECLARE_DELEGATE_TwoParams(FKafkaConsumerCallbackHandle, FString/*topicName*/,FString/*Msg*/);
 
-class SIMPLEKAFKA_API SimpleKafkaConsumer {
+//
+class SIMPLEKAFKA_API SimpleKafkaConsumer 
+{
 public:
-    explicit SimpleKafkaConsumer(const std::string& brokers, const std::string& groupID, const std::string& topics, int partition = 0, int offset = 0);
-    ~SimpleKafkaConsumer();
+	SimpleKafkaConsumer(const std::string& brokers, const std::string& groupID, const std::vector<std::string> topics);
 
-    
+    SimpleKafkaConsumer(const std::string& brokers, const std::string& groupID, const std::string& topics, int partition = 0, int offset = 0);
+    ~SimpleKafkaConsumer();
+   
+
     bool Init();
 
     UE_DEPRECATED(4.27,"以同步方式启动消息消费，UE客户端不推荐，会阻塞主线程")
     void Start(int timeout_ms);
 
     void StartAsync(int timeout_ms);
+
+    void SetPauseAsyc(bool Pause);
 
     void Stop();
 
@@ -44,9 +50,9 @@ public:
 		MsgCallBackHandle = Delegate;
 	};
 
-	FKafkaConsumerCallbackHandle GetCallbackHandle()
+	FKafkaConsumerCallbackHandle* GetCallbackHandle()
 	{
-		return MsgCallBackHandle;
+		return &MsgCallBackHandle;
 	};
 
 	bool isRun() {return m_bRun;};
@@ -58,16 +64,22 @@ private:
 
     FKafkaConsumerCallbackHandle MsgCallBackHandle;
 
+    bool InitTopics();
+
 protected:
 	std::string m_strBrokers;
 
-	std::string m_strTopics;
+	std::string m_strTopic;
+
+    std::vector<std::string> topics;
 
 	std::string m_strGroupid;
 
 	int64_t m_nLastOffset = 0;
 
 	RdKafka::Consumer* m_pKafkaConsumer = nullptr;
+
+    RdKafka::KafkaConsumer* m_MultiKafkaConsumer = nullptr;//多topic
 
 	RdKafka::Topic* m_pTopic = nullptr;
 
@@ -78,6 +90,8 @@ protected:
 	bool m_bRun = false;  //是否持续消费，持续监听
 
     class FPullMessageThread* pmThread = nullptr;
+
+    bool isMultiTopic = false;
 };
 
 
@@ -178,7 +192,17 @@ public:
 			thread->Suspend(pause);
 	}
 
-
+	void StopThread()
+	{
+		if (thread != nullptr)
+		{
+            thread->Kill(true);
+			delete thread;
+            thread = nullptr;
+		}
+        KafkaConsumer = nullptr;
+        msg = nullptr;
+	}
 protected:
 
 	FRunnableThread* thread = nullptr;

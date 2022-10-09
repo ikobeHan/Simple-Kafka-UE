@@ -4,7 +4,7 @@
 #include "SimpleKafkaFunctionLib.generated.h"
 
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FKafkaConsumerCallback_BP, FString, Msg);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FKafkaConsumerCallback_BP, FString, TopicName, FString, Msg);
 
 UCLASS()
 class SIMPLEKAFKA_API USimpleKafkaFunctionLib : public UBlueprintFunctionLibrary
@@ -13,12 +13,21 @@ class SIMPLEKAFKA_API USimpleKafkaFunctionLib : public UBlueprintFunctionLibrary
 
 public:
 	/*
-	* ÔİÊ±×ö³öµ¥¶ÀµÄÏû·ÑÕß£¬Ô¼¶¨Ö»ĞèÒªÏû·ÑÒ»¸ötopic¼´¿É¡£
+	* å•ä¾‹æ¶ˆè´¹è€…,å•ä¸ªtopic
 	*/
 	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Consumer")
 	static bool StartConsumer(const FString& URL, const FString& TopicStr, const FString& GroudID = "0");
+	/*
+	* å•ä¾‹æ¶ˆè´¹è€…,å¤šä¸ªtopic
+	*/
+	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Consumer")
+	static bool StartConsumerWithTopics(const FString& URL,TArray<FString> TopicsStr, const FString& GroudID = "0");
 
-	//ÓÎÏ·½ø³ÌÏú»ÙÖ®Ç°µ÷Ò»ÏÂ£¬Ïú»ÙÏÂ
+	//æš‚åœæˆ–å›å¤çº¿ç¨‹
+	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Consumer")
+	static void SetPauseConsumer(bool Pause);
+
+	//æ¸¸æˆè¿›ç¨‹é”€æ¯ä¹‹å‰è°ƒä¸€ä¸‹ï¼Œé”€æ¯ä¸‹
 	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Consumer")
 	static void StopConsumer();
 
@@ -27,7 +36,7 @@ public:
 
 
 	/*
-	* Éú²úÕßÒ²µ¥Àı°É£¬Ö»ĞèÒªÉú²úÒ»¸ö¸ø·şÎñÆ÷µÄtopic
+	* ç”Ÿäº§è€…ä¹Ÿå•ä¾‹
 	*/
 	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Producer")
 	static bool StartProducer(const FString& URL, const FString& TopicStr, int32 Partion = 0);
@@ -35,10 +44,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Producer")
 	static bool SendMessag(const FString& Msg, const FString& KeyStr = "");
 
-	//ÓÎÏ·½ø³ÌÏú»ÙÖ®Ç°µ÷Ò»ÏÂ£¬Ïú»ÙÏÂ
+	//æ¸¸æˆè¿›ç¨‹é”€æ¯ä¹‹å‰è°ƒä¸€ä¸‹ï¼Œé”€æ¯ä¸‹
 	UFUNCTION(BlueprintCallable, Category = "SimpleKafka|Producer")
 	static void StopProducer();
 
+
+
+
+	////////////////////////   é€šå¸¸æ–¹å¼ éå•ä¾‹   /////////////////////////////
+	/*
+	* æ¯ä¸ªconsumerä¸€ä¸ªtopicçš„æ–¹å¼ï¼Œéœ€è¦groupID ä¸ç›¸åŒï¼Œå¦åˆ™åªèƒ½ä¸€ä¸ªconsoumeræ¥å—åˆ°æ¶ˆæ¯,éœ€è¦è‡ªå·±ç®¡ç†å¥æŸ„
+	*/
+	static class SimpleKafkaConsumer* CreateConsumerWithTopic(const FString& URL, const FString& TopicStr, const FString& GroupID = "0");
+	static void RegisterConsumerCallback(class SimpleKafkaConsumer* Consumer,FKafkaConsumerCallback_BP Callback);
+	static void StopConsumer(class SimpleKafkaConsumer* Consumer);
 
 public:
 	// ONLY for debug

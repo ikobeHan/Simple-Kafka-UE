@@ -11,38 +11,13 @@ public class SimpleKafka : ModuleRules
         get { return Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty/")); }
     }
 
-    public void CopyFileToRuntime()
-    {
-        string[] files=new string[]{ "zlib.dll", "librdkafka.dll", "librdkafkacpp.dll", };
-
-        var targetPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../Binaries/Win64"));
-        var basePath = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty/RdKafka/x64_v142/bin"));
-
-        foreach (var item in files)
-        {
-            var t=Path.Combine(targetPath, item);
-            var b=Path.Combine(basePath, item);
-
-            if (!Directory.Exists(targetPath))
-            {
-                Directory.CreateDirectory(targetPath);
-            }
-
-            if (!File.Exists(t)){
-                File.Copy(b,t);
-            }
-           
-           RuntimeDependencies.Add(t);
-        }
-    }
-    
     public bool LoadRdKafkaLib(ReadOnlyTargetRules Target)
     {
         PublicIncludePaths.Add(ThirdPartyPath + "RdKafka/include");
         PublicSystemIncludePaths.Add(ThirdPartyPath + "RdKafka/include");
 
         bool isLibararySupported = false;
-        if (Target.Platform == UnrealTargetPlatform.Win64) //only for win64 right now
+        if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             isLibararySupported = true;
             PublicSystemLibraryPaths.Add(ThirdPartyPath + "RdKafka/x64_v142/lib/");
@@ -68,7 +43,8 @@ public class SimpleKafka : ModuleRules
     public SimpleKafka(ReadOnlyTargetRules Target) : base(Target)
 	{
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
+        CppStandard = CppStandardVersion.Cpp17;
+
         bLegacyPublicIncludePaths = false;
 		PublicIncludePaths.AddRange(
 			new string[] {
@@ -121,6 +97,5 @@ public class SimpleKafka : ModuleRules
         // Enable exceptions to allow error handling
         bEnableExceptions = true;
         LoadRdKafkaLib(Target);
-        CopyFileToRuntime();
     }
 }

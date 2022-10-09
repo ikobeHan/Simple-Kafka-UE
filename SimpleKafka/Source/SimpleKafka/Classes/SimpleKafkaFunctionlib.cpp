@@ -23,6 +23,38 @@ bool USimpleKafkaFunctionLib::StartConsumer(const FString& URL, const FString& T
 	return false;
 }
 
+bool USimpleKafkaFunctionLib::StartConsumerWithTopics(const FString& URL, TArray<FString> TopicsStr, const FString& GroudID)
+{
+	if (KafkaConsumerClient_) //单例
+	{
+		return false;
+	}
+
+	std::vector<std::string> vec;
+	for (FString str : TopicsStr)
+	{
+		if (!str.IsEmpty())
+		{
+			vec.push_back(TCHAR_TO_UTF8(*str));
+		}
+	}
+	KafkaConsumerClient_ = new SimpleKafkaConsumer(TCHAR_TO_UTF8(*URL), TCHAR_TO_UTF8(*GroudID), vec);
+	if (KafkaConsumerClient_->Init())
+	{
+		KafkaConsumerClient_->StartAsync(1000);
+		return true;
+	}
+	return false;
+}
+
+void USimpleKafkaFunctionLib::SetPauseConsumer(bool Pause)
+{
+	if (KafkaConsumerClient_)
+	{
+		KafkaConsumerClient_->SetPauseAsyc(Pause);
+	}
+}
+
 void USimpleKafkaFunctionLib::StopConsumer()
 {
 	if (KafkaConsumerClient_)
@@ -34,15 +66,38 @@ void USimpleKafkaFunctionLib::StopConsumer()
 
 void USimpleKafkaFunctionLib::RegisterConsumerCallback(FKafkaConsumerCallback_BP Callback)
 {
-	if (KafkaConsumerClient_) //单例吧。只需要监听一个topic
+	RegisterConsumerCallback(KafkaConsumerClient_, Callback);
+}
+
+
+SimpleKafkaConsumer* USimpleKafkaFunctionLib::CreateConsumerWithTopic(const FString& URL, const FString& TopicStr, const FString& GroupID)
+{
+	SimpleKafkaConsumer* Client_ = new SimpleKafkaConsumer(TCHAR_TO_UTF8(*URL), TCHAR_TO_UTF8(*GroupID), TCHAR_TO_UTF8(*TopicStr));
+	if (Client_->Init())
 	{
-		KafkaConsumerClient_->GetCallbackHandle().BindLambda([Callback](FString msg) 
+		Client_->StartAsync(1000);
+	}
+	return Client_;
+}
+
+void USimpleKafkaFunctionLib::RegisterConsumerCallback(SimpleKafkaConsumer* Consumer, FKafkaConsumerCallback_BP Callback)
+{
+	if (Consumer)
+	{
+		Consumer->GetCallbackHandle()->BindLambda([Callback](FString TopicName, FString msg)
 		{
-			Callback.ExecuteIfBound(msg);
+			Callback.ExecuteIfBound(TopicName,msg);
 		});
 	}
 }
 
+void USimpleKafkaFunctionLib::StopConsumer(SimpleKafkaConsumer* Consumer)
+{
+	if (Consumer)
+	{
+		Consumer->Stop();
+	}
+}
 
 
 void USimpleKafkaFunctionLib::TestConsumer()
